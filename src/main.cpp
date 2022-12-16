@@ -243,15 +243,15 @@ void updateIR() {
     right += analogRead(irRight);
   }
   front /= 5; front  = 27664*pow(front,-1.525);
-  back /= 5; back  = 27664*pow(back,-1.525);
-  left /= 5; front  = 27664*pow(left,-1.525);
-  right /= 5; front  = 27664*pow(right,-1.525);
+  back /= 5; back = 2940.1*pow(back, -1.25);
+  left /= 5; left  = 27664*pow(left, -1.525);
+  right /= 5; right  = 35047*pow(right,-1.569);
   //  print IR data
-  //  Serial.println("frontIR\tbackIR\tleftIR\trightIR");
-  //  Serial.print(front); Serial.print("\t");
-  //  Serial.print(back); Serial.print("\t");
-  //  Serial.print(left); Serial.print("\t");
-  //  Serial.println(right);
+    Serial.println("frontIR\tbackIR\tleftIR\trightIR");
+    Serial.print(front); Serial.print("\t");
+    Serial.print(back); Serial.print("\t");
+    Serial.print(left); Serial.print("\t");
+    Serial.println(right);
   if (right > irThresh)
     bitSet(flag, obRight);//set the right obstacle
   else
