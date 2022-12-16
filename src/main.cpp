@@ -247,11 +247,13 @@ void updateIR() {
   left /= 5; left  = 27664*pow(left, -1.525);
   right /= 5; right  = 35047*pow(right,-1.569);
   //  print IR data
+  
     Serial.println("frontIR\tbackIR\tleftIR\trightIR");
     Serial.print(front); Serial.print("\t");
     Serial.print(back); Serial.print("\t");
     Serial.print(left); Serial.print("\t");
     Serial.println(right);
+  
   if (right > irThresh)
     bitSet(flag, obRight);//set the right obstacle
   else
@@ -261,7 +263,6 @@ void updateIR() {
   else
     bitClear(flag, obLeft);//clear the left obstacle
   if (front > irThresh) {
-    Serial.println("set front obstacle bit");
     bitSet(flag, obFront);//set the front obstacle
   }
   else
@@ -374,12 +375,6 @@ void updateState() {
   //    Serial.println(state, BIN);
 }
 
-void calculateVector() {
-  irFrontAvg;
-  irLeftAvg;
-
-}
-
 
 /*
   This is a sample updateSensors() function and it should be updated along with the description to reflect what you actually implemented
@@ -396,9 +391,9 @@ void updateSensors() {
   state = 0;      //clear all state flags
   updateIR();     //update IR readings and update flag variable and state machine
   //updateSonar();  //update Sonar readings and update flag variable and state machine
-  updateSonar2(); //there are 2 ways to read sonar data, this is the 2nd option, use whichever one works best for your hardware
+  //updateSonar2(); //there are 2 ways to read sonar data, this is the 2nd option, use whichever one works best for your hardware
   updateState();  //update State Machine based upon sensor readings
-  //delay(1000);     //added so that you can read the data on the serial monitor
+  delay(1000);     //added so that you can read the data on the serial monitor
 }
 
 void stop() {
@@ -606,8 +601,21 @@ void goToGoal(float x, float y) {
 
 }
 
+/*
+  This function takes the sensor averages and adds them as vectors to if they meet the obstacle threshold.
+  This sets avoidVector to have the vector to pass to goToGoal
+*/
+void randomWander() {
+  int direction = random(-1, 1);
+}
+
+
+/*
+  This function takes the sensor averages and adds them as vectors to if they meet the obstacle threshold.
+  This sets avoidVector to have the vector to pass to goToGoal
+*/
 void avoid() {
-  updateSensors();
+  //updateSensors();
   int vector[2]; //Vector [Magnitude, Angle]
   if (irFrontAvg < irThresh) {
     avoidVector[0] = irFrontAvg;
@@ -644,17 +652,18 @@ void avoid() {
 void robotMotion() {
   if ((flag & 1) || bitRead(state, collide) && aggressive) { //check for a collide state - aggressive kid
     stop();
-    Serial.println("robot stop");
-  } else if ((flag & 0b1) || bitRead(state, collide) && !aggressive) { //check for a collide state - aggressive kid
+    //Serial.println("robot stop");
+  } else if ((flag & 2) || bitRead(state, collide) && !aggressive) { //check for a collide state - aggressive kid
     forwardDist(-5);
     Serial.println("robot backwards");
   } else if (bitRead(state, collide)) {
     stop();
     avoid();
-    double radians = atan2(avoidVector[0], avoidVector[1]); //returns angle to x, y in radians
-    float angle = (radians * 180.0/PI);
-    Serial.println(angle);
-    goToGoal(sqrt(pow(avoidVector[0], 2) + pow(avoidVector[1], 2)), angle);
+    //double radians = atan2(avoidVector[0], avoidVector[1]); //returns angle to x, y in radians
+    //float angle = (radians * 180.0/PI);
+    //Serial.println(angle);
+    //goToGoal(sqrt(pow(avoidVector[0], 2) + pow(avoidVector[1], 2)), angle);
+    goToGoal(avoidVector[0], avoidVector[1]); //should avoid properly, may need to adjust magnitude but angle should be correct
   }
   else{
     Serial.println("robot forward");
