@@ -83,15 +83,16 @@ MultiStepper steppers;//create instance to control multiple steppers at the same
 #define irRear  A1//back IR analog pin
 #define irRight A2 //right IR analog pin
 #define irLeft  A3 //left IR analog pin
-#define button A15    //pushbutton 
+#define button A15 //pushbutton
 
-//defome sonar connections
-#define snrLeft   A8   //front left sonar 
-#define snrRight  A9  //front right sonar 
-#define button    A15    //pushbutton 
+//define sonar connections
+#define snrLeft 8  //front left sonar 
+#define snrRight 9 //front right sonar 
+long SNRDist;
+long SNLDist;
 
-NewPing sonarLt(snrLeft, snrLeft);    //create an instance of the left sonar
-NewPing sonarRt(snrRight, snrRight);  //create an instance of the right sonar
+NewPing SNL(snrLeft, snrLeft);    //create an instance of the left sonar
+NewPing SNR(snrRight, snrRight);  //create an instance of the right sonar
 
 #define irThresh    4 //in inches // The IR threshold for presence of an obstacle - 400 raw value
 #define snrThresh   5   // The sonar threshold for presence of an obstacle
@@ -118,8 +119,6 @@ int srLeftAvg;  //variable to holde left sonar data
 int srRightAvg; //variable to hold right sonar data
 
 volatile boolean test_state; //variable to hold test led state for timer interrupt
-
-
 
 //flag byte to hold sensor data
 volatile byte flag = 0;    // Flag to hold IR & Sonar data - used to create the state machine
@@ -320,11 +319,11 @@ void updateSonar2() {
   srRightAvg = 0;
   srLeftAvg = 0;
   for (int i = 0;i < 5;i++) {
-    srRightAvg += sonarRt.ping_in(); //right sonara in inches
+    srRightAvg += SNR.ping_in(); //right sonara in inches
   }
   delay(50);
   for (int i = 0;i < 5;i++) {
-    srLeftAvg += sonarLt.ping_in(); //left sonar in inches
+    srLeftAvg += SNL.ping_in(); //left sonar in inches
   }
   srRightAvg /= 5;
   srLeftAvg /= 5;
@@ -374,7 +373,6 @@ void updateState() {
   //    Serial.print("state byte: ");
   //    Serial.println(state, BIN);
 }
-
 
 /*
   This is a sample updateSensors() function and it should be updated along with the description to reflect what you actually implemented
