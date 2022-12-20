@@ -82,8 +82,8 @@ MultiStepper steppers;//create instance to control multiple steppers at the same
 #define snrRight  A9  //front right sonar 
 #define button    A15    //pushbutton 
 
-NewPing sonarLt(snrLeft, snrLeft);    //create an instance of the left sonar
-NewPing sonarRt(snrRight, snrRight);  //create an instance of the right sonar
+NewPing SNL(snrLeft, snrLeft);    //create an instance of the left sonar
+NewPing SNR(snrRight, snrRight);  //create an instance of the right sonar
 
 #define irThresh    400 // The IR threshold for presence of an obstacle
 #define snrThresh   5   // The sonar threshold for presence of an obstacle
@@ -229,9 +229,9 @@ void updateSonar() {
   the necesary changes for the lab requirements.
 */
 void updateSonar2() {
-  srRightAvg =  sonarRt.ping_in(); //right sonara in inches
+  srRightAvg =  SNR.ping_in(); //right sonara in inches
   delay(50);
-  srLeftAvg = sonarLt.ping_in(); //left sonar in inches
+  srLeftAvg = SNL.ping_in(); //left sonar in inches
   //    Serial.print("lt snr:\t");
   //    Serial.print(srLeftAvg);
   //    Serial.print("rt snr:\t");

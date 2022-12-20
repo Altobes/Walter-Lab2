@@ -83,15 +83,16 @@ MultiStepper steppers;//create instance to control multiple steppers at the same
 #define irRear  A1//back IR analog pin
 #define irRight A2 //right IR analog pin
 #define irLeft  A3 //left IR analog pin
-#define button A15    //pushbutton 
+#define button A15 //pushbutton
 
-//defome sonar connections
-#define snrLeft   A8   //front left sonar 
-#define snrRight  A9  //front right sonar 
-#define button    A15    //pushbutton 
+//define sonar connections
+#define snrLeft 8  //front left sonar 
+#define snrRight 9 //front right sonar 
+long SNRDist;
+long SNLDist;
 
-NewPing sonarLt(snrLeft, snrLeft);    //create an instance of the left sonar
-NewPing sonarRt(snrRight, snrRight);  //create an instance of the right sonar
+NewPing SNL(snrLeft, snrLeft);    //create an instance of the left sonar
+NewPing SNR(snrRight, snrRight);  //create an instance of the right sonar
 
 #define irThresh    5 //in inches // The IR threshold for presence of an obstacle - 400 raw value
 #define snrThresh   5   // The sonar threshold for presence of an obstacle
@@ -121,9 +122,6 @@ volatile boolean test_state; //variable to hold test led state for timer interru
 
 int obsIR[4] = {0, 0, 0, 0};
 int obsSonar[2] = {0, 0};
-
-
-
 //flag byte to hold sensor data
 volatile byte flag = 0;    // Flag to hold IR & Sonar data - used to create the state machine
 
@@ -318,6 +316,7 @@ void updateSonar() {
     digitalWrite(snrRight, LOW);//set pin low first again
     pinMode(snrRight, INPUT);//set pin as input with duration as reception
     right += pulseIn(snrRight, HIGH);//measures how long the pin is high
+
   }
   right /= 5;
   right = rightSonarToInches(right);
@@ -388,7 +387,6 @@ void updateState() {
   //    Serial.print("state byte: ");
   //    Serial.println(state, BIN);
 }
-
 
 /*
   This is a sample updateSensors() function and it should be updated along with the description to reflect what you actually implemented
