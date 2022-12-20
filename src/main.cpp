@@ -42,6 +42,8 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
+#include <stdlib.h>
+#include <time.h>
 
 
 //define motor pin numbers
@@ -171,7 +173,21 @@ const float CM_TO_STEPS = 29.95;//25.6;
 const float TICKS_TO_STEPS = 20.0;
 const float STEPS_TO_TICKS = 1.0/20.0;
 
-
+//Random Wander movement list
+/**
+ * 0 - Stop
+ * 1 - Move forward
+ * 2 - Move backward
+ * 3 - Turn forward left
+ * 4 - Turn forward right
+ * 5 - Turn backward left
+ * 6 - Turn backward right
+ * 7 - Spin right
+ * 8 - Change motor speed
+ * 9 - 
+ * 10 - 
+*/
+short wanderList[] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
 
 boolean aggressive; //boolean to set robot to aggressive kid
 int avoidVector[2];
@@ -697,6 +713,48 @@ void robotMotion() {
   }
 }
 
+void randWander() {
+  bool FL[2] = {0, 0};
+  bool FR[2] = {0, 1};
+  bool BL[2] = {1, 0};
+  bool BR[2] = {1, 1};
+  //randomize the wander movement list
+  short len = sizeof(wanderList) / sizeof(int);
+  for (short i = 0; i < len - i; i++) {
+    Serial.println(wanderList[i]);
+  }
+  srand(time(NULL));
+  for (short i = 0; i < len - 1; ++i) {
+    short j = rand() % (len-i) + i;
+    short temp = wanderList[i];
+    wanderList[i] = wanderList[j];
+    wanderList[j] = temp;
+  }
+  for (short i = 0; i < len - i; i++) {
+    Serial.println(wanderList[i]);
+  }
+  for (short i = 0; i < len - 1; i++) {
+    if (wanderList[i] == 0) { //stop
+      runToStop();
+    } else if (wanderList[i] == 1) { //Move forward
+      forward(3);
+    } else if (wanderList[i] == 2) { //Move backward
+      forward(-4);
+    } else if (wanderList[i] == 3) { //Turn forward left
+      turn(5, FL);
+    } else if (wanderList[i] == 4) { //Turn forward right
+      turn(5, FR);
+    } else if (wanderList[i] == 5) { //Turn backward left
+      turn(5, BL);
+    } else if (wanderList[i] == 6) { //Turn backward right
+      turn(5, BR);
+    } else if (wanderList[i] == 7) { //Spin right
+      turn(0, FL);
+    } else if (wanderList[i] == 8) { //Change motor speed
+      setBothStepperSpeed(250, 250); //set stepper speeds
+    }
+  }
+}
 
 void setup()
 {
@@ -733,5 +791,5 @@ void setup()
 
 void loop()
 {
-  robotMotion();  //execute robot motions based upon sensor data and current state
+  randWander();  //execute robot motions based upon sensor data and current state
 }
