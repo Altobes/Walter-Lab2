@@ -93,7 +93,7 @@ MultiStepper steppers;//create instance to control multiple steppers at the same
 NewPing sonarLt(snrLeft, snrLeft);    //create an instance of the left sonar
 NewPing sonarRt(snrRight, snrRight);  //create an instance of the right sonar
 
-#define irThresh    4 //in inches // The IR threshold for presence of an obstacle - 400 raw value
+#define irThresh    5 //in inches // The IR threshold for presence of an obstacle - 400 raw value
 #define snrThresh   5   // The sonar threshold for presence of an obstacle
 #define minThresh   0   // The sonar minimum threshold to filter out noise
 #define stopThresh  150 // If the robot has been stopped for this threshold move
@@ -118,6 +118,9 @@ int srLeftAvg;  //variable to holde left sonar data
 int srRightAvg; //variable to hold right sonar data
 
 volatile boolean test_state; //variable to hold test led state for timer interrupt
+
+int obsIR[4] = {0, 0, 0, 0};
+int obsSonar[2] = {0, 0};
 
 
 
@@ -170,8 +173,19 @@ const float CM_TO_STEPS = 29.95;//25.6;
 const float TICKS_TO_STEPS = 20.0;
 const float STEPS_TO_TICKS = 1.0/20.0;
 
+
+
 boolean aggressive; //boolean to set robot to aggressive kid
 int avoidVector[2];
+
+float leftSonarToInches(float pulse) {
+  return 0.0068*pulse - 0.6529;
+}
+
+float rightSonarToInches(float pulse) {
+  return 0.0067*pulse - 0.3554;
+
+}
 
 // Helper Functions
 /**
@@ -235,17 +249,22 @@ void runAtSpeed ( void ) {
 */
 
 void updateIR() {
-  int front, back, left, right;
+  int front = 0, back = 0, left = 0, right = 0;
   for (int i = 0;i < 5;i++) {
     front += analogRead(irFront);
     back += analogRead(irRear);
     left += analogRead(irLeft);
     right += analogRead(irRight);
   }
-  front /= 5; front  = 27664*pow(front,-1.525);
+  front /= 5; front = 2080*pow(front,-1.198);
   back /= 5; back = 2940.1*pow(back, -1.25);
-  left /= 5; left  = 27664*pow(left, -1.525);
-  right /= 5; right  = 35047*pow(right,-1.569);
+  left /= 5; left = 27664*pow(left, -1.525);
+  right /= 5; right = 35047*pow(right,-1.569);
+
+  irFrontAvg = front;
+  irRearAvg = back;
+  irLeftAvg = left;
+  irRightAvg = right;
   //  print IR data
   
     Serial.println("frontIR\tbackIR\tleftIR\trightIR");
@@ -254,23 +273,32 @@ void updateIR() {
     Serial.print(left); Serial.print("\t");
     Serial.println(right);
   
-  if (right > irThresh)
+  if (right < irThresh) {
     bitSet(flag, obRight);//set the right obstacle
-  else
+    obsIR[0] = 1;
+  } else
     bitClear(flag, obRight);//clear the right obstacle
-  if (left > irThresh)
+    obsIR[0] = 0;
+  if (left < irThresh) {
     bitSet(flag, obLeft);//set the left obstacle
-  else
+    obsIR[1] = 1;
+  } else
     bitClear(flag, obLeft);//clear the left obstacle
-  if (front > irThresh) {
+    obsIR[1] = 0;
+  if (front < irThresh) {
     bitSet(flag, obFront);//set the front obstacle
+    obsIR[2] = 0;
   }
   else
     bitClear(flag, obFront);//clear the front obstacle
-  if (back > irThresh)
+    obsIR[2] = 1;
+  if (back < irThresh) {
     bitSet(flag, obRear);//set the back obstacle
-  else
+    obsIR[3] = 1;
+  } else {
     bitClear(flag, obRear);//clear the back obstacle
+    obsIR[3] = 0;
+  }
 }
 
 /*
@@ -280,69 +308,53 @@ void updateIR() {
 void updateSonar() {
   long left, right;
   //read right sonar
-  pinMode(snrRight, OUTPUT);//set the PING pin as an output
-  digitalWrite(snrRight, LOW);//set the PING pin low first
-  delayMicroseconds(2);//wait 2 us
-  digitalWrite(snrRight, HIGH);//trigger sonar by a 2 us HIGH PULSE
-  delayMicroseconds(5);//wait 5 us
-  digitalWrite(snrRight, LOW);//set pin low first again
-  pinMode(snrRight, INPUT);//set pin as input with duration as reception
-  right = pulseIn(snrRight, HIGH);//measures how long the pin is high
+  right = 0;
+  for (int i = 0;i < 5;i++) {
+    pinMode(snrRight, OUTPUT);//set the PING pin as an output
+    digitalWrite(snrRight, LOW);//set the PING pin low first
+    delayMicroseconds(2);//wait 2 us
+    digitalWrite(snrRight, HIGH);//trigger sonar by a 2 us HIGH PULSE
+    delayMicroseconds(5);//wait 5 us
+    digitalWrite(snrRight, LOW);//set pin low first again
+    pinMode(snrRight, INPUT);//set pin as input with duration as reception
+    right += pulseIn(snrRight, HIGH);//measures how long the pin is high
+  }
+  right /= 5;
+  right = rightSonarToInches(right);
+  srRightAvg = right;
 
   //read left sonar
-  pinMode(snrLeft, OUTPUT);//set the PING pin as an output
-  digitalWrite(snrLeft, LOW);//set the PING pin low first
-  delayMicroseconds(2);//wait 2 us
-  digitalWrite(snrLeft, HIGH);//trigger sonar by a 2 us HIGH PULSE
-  delayMicroseconds(5);//wait 5 us
-  digitalWrite(snrLeft, LOW);//set pin low first again
-  pinMode(snrLeft, INPUT);//set pin as input with duration as reception
-  left = pulseIn(snrLeft, HIGH);//measures how long the pin is high
+  left = 0;
+  for (int i = 0;i < 5;i++) {
+    pinMode(snrLeft, OUTPUT);//set the PING pin as an output
+    digitalWrite(snrLeft, LOW);//set the PING pin low first
+    delayMicroseconds(2);//wait 2 us
+    digitalWrite(snrLeft, HIGH);//trigger sonar by a 2 us HIGH PULSE
+    delayMicroseconds(5);//wait 5 us
+    digitalWrite(snrLeft, LOW);//set pin low first again
+    pinMode(snrLeft, INPUT);//set pin as input with duration as reception
+    left += pulseIn(snrLeft, HIGH);//measures how long the pin is high
+  }
+  left /= 5;
+  left = leftSonarToInches(left);
+  srLeftAvg = left;
   //  print sonar data
-  //    Serial.println("leftSNR\trightSNR");
-  //    Serial.print(left); Serial.print("\t");
-  //    Serial.println(right);
-  if (right < snrThresh)
+      //Serial.println("leftSNR\trightSNR");
+      //Serial.print(left); Serial.print("\t");
+      //Serial.println(right);
+  if (right < snrThresh) {
     bitSet(flag, obFRight);//set the front right obstacle
-  else
+    obsSonar[0] = 1;
+  } else
     bitClear(flag, obFRight);//clear the front right obstacle
-  if (left < snrThresh)
+    obsSonar[0] = 0;
+  if (left < snrThresh) {
     bitSet(flag, obFLeft);//set the front left obstacle
-  else
+    obsSonar[1] = 1;
+  } else {
     bitClear(flag, obFLeft);//clear the front left obstacle
-}
-
-/*
-  This is a sample updateSonar2() function, the description and code should be updated to take an average, consider all sensors and reflect
-  the necesary changes for the lab requirements.
-*/
-void updateSonar2() {
-  srRightAvg = 0;
-  srLeftAvg = 0;
-  for (int i = 0;i < 5;i++) {
-    srRightAvg += sonarRt.ping_in(); //right sonara in inches
+    obsSonar[1] = 0;
   }
-  delay(50);
-  for (int i = 0;i < 5;i++) {
-    srLeftAvg += sonarLt.ping_in(); //left sonar in inches
-  }
-  srRightAvg /= 5;
-  srLeftAvg /= 5;
-  
-  
-      Serial.print("lt snr:\t");
-      Serial.print(srLeftAvg);
-      Serial.print("rt snr:\t");
-      Serial.println(srRightAvg);
-  
-  if (srRightAvg < snrThresh && srRightAvg > minThresh)
-    bitSet(flag, obFRight);//set the front right obstacle
-  else
-    bitClear(flag, obFRight);//clear the front right obstacle
-  if (srLeftAvg < snrThresh && srLeftAvg > minThresh)
-    bitSet(flag, obFLeft);//set the front left obstacle
-  else
-    bitClear(flag, obFLeft);//clear the front left obstacle
 }
 
 /*
@@ -354,14 +366,16 @@ void updateState() {
     bitSet(state, fwd); //set forward motion
     bitClear(state, collide);//clear collide state
     count--;//decrement collide counter
-  }
-  else if (flag & 0b1) { //front sensors triggered
+  } else if (flag & 0b0) { //front sensors triggered
     bitClear(state, fwd); //clear reverse motion
     bitSet(state, collide);//set collide state
   } else if (flag & 0b10) { //rear sensors triggered
     bitClear(state, fwd); //clear reverse motion
     bitSet(state, collide);//set collide state
-  } else if (flag & 0b11) { //rear sensors triggered
+  } else if (flag & 0b11) { //Right sensors triggered
+    bitClear(state, fwd); //clear reverse motion
+    bitSet(state, collide);//set collide state
+  } else if (flag & 0b100) { //Left
     bitClear(state, fwd); //clear reverse motion
     bitSet(state, collide);//set collide state
   }
@@ -390,8 +404,7 @@ void updateSensors() {
   flag = 0;       //clear all sensor flags
   state = 0;      //clear all state flags
   updateIR();     //update IR readings and update flag variable and state machine
-  //updateSonar();  //update Sonar readings and update flag variable and state machine
-  //updateSonar2(); //there are 2 ways to read sonar data, this is the 2nd option, use whichever one works best for your hardware
+  updateSonar();  //update Sonar readings and update flag variable and state machine
   updateState();  //update State Machine based upon sensor readings
   delay(1000);     //added so that you can read the data on the serial monitor
 }
@@ -441,7 +454,6 @@ void forwardDist(int distance) {
 
   float steps = distance * CM_TO_STEPS;
   float ticks = steps * STEPS_TO_TICKS;
-  Serial.println(steps);
   
   stepperRight.moveTo(steps); //move one full rotation forward relative to current position
   stepperLeft.moveTo(steps); //move one full rotation forward relative to current position
@@ -450,7 +462,7 @@ void forwardDist(int distance) {
   stepperLeft.runSpeedToPosition(); //move left motor
 
   runToStop(); //run until the robot reaches the target
-
+/*
   int errorLeft = ticks - encoder[LEFT];
   int errorRight = ticks - encoder[RIGHT];
 
@@ -462,6 +474,7 @@ void forwardDist(int distance) {
   stepperRight.runSpeedToPosition(); //move right motor
   stepperLeft.runSpeedToPosition(); //move left motor
   runToStop();
+  */
 }
 
 /**
@@ -531,6 +544,8 @@ void turn(float radius, bool turnDirection[2]) {
  After turning, encoders are used to error check and move robot again if it moved too much or too little
 */
 void goToAngle(float angle) {
+  stepperRight.setCurrentPosition(0);
+  stepperLeft.setCurrentPosition(0);
   encoder[LEFT] = 0;
   encoder[RIGHT] = 0;
   digitalWrite(blueLED, LOW); //turn off red LED
@@ -543,17 +558,19 @@ void goToAngle(float angle) {
 
   stepperRight.moveTo(steps);
   stepperLeft.moveTo(-steps);
+  /*
   Serial.print("Steps: ");
   Serial.println(steps);
   Serial.print("Ticks: ");
   Serial.println(ticks);
+  */
 
   setBothStepperSpeed(400, 400); //set motor speeds
   stepperRight.runSpeedToPosition(); //move right motor
   stepperLeft.runSpeedToPosition(); //move left motorw
   runToStop();
   
-  
+  /*
   Serial.print("Left Encoder: ");
   Serial.println(encoder[LEFT]);
   Serial.println("Right Endoder: ");
@@ -577,6 +594,7 @@ void goToAngle(float angle) {
   stepperLeft.runSpeedToPosition(); //move left motor
 
   runToStop(); //run until the robot reaches the target
+  */
 }
 
 /**
@@ -592,8 +610,8 @@ void goToGoal(float x, float y) {
   double radians = atan2(y, x); //returns angle to x, y in radians
   
   float angle = (radians * 180.0/PI);
-  Serial.print("Degrees: ");
-  Serial.println(angle);
+  //Serial.print("Degrees: ");
+  //Serial.println(angle);
   goToAngle(angle);
   float distance = sqrt((x*x) + (y*y));
 
@@ -609,6 +627,13 @@ void randomWander() {
   int direction = random(-1, 1);
 }
 
+/*
+  Function executes the aggressive kid behavior, which is stopping at an obstacle and turning on the blue led;
+*/
+void aggressiveKid() {
+  digitalWrite(blueLED, HIGH); //turn on blue LED
+  stop();
+}
 
 /*
   This function takes the sensor averages and adds them as vectors to if they meet the obstacle threshold.
@@ -616,30 +641,31 @@ void randomWander() {
 */
 void avoid() {
   //updateSensors();
-  int vector[2]; //Vector [Magnitude, Angle]
+  avoidVector[0] = 0;
+  avoidVector[1] = 0;
   if (irFrontAvg < irThresh) {
-    avoidVector[0] = irFrontAvg;
-    avoidVector[1] = 0;
+    avoidVector[0] -= 1;//irFrontAvg;
+    avoidVector[1] -= 0;
   }
   if (irRearAvg < irThresh) {
-    avoidVector[0] += -irRearAvg;
+    avoidVector[0] += 1;//irRearAvg;
     avoidVector[1] += 0;
   }
   if (irLeftAvg < irThresh) {
-    avoidVector[0] += 0;
-    avoidVector[1] += irLeftAvg;
+    avoidVector[0] -= 0;
+    avoidVector[1] -= 1;//irLeftAvg;
   }
   if (irRightAvg < irThresh) {
     avoidVector[0] += 0;
-    avoidVector[1] += -irRightAvg;
+    avoidVector[1] += 1;//irRightAvg;
   }
-  if (snrLeft < snrThresh) {
-    avoidVector[0] += snrLeft* cos(45);
-    avoidVector[1] += snrLeft* sin(45);
+  if (srRightAvg < snrThresh) {
+    avoidVector[0] += 0;//srRightAvg* cos(45);
+    avoidVector[1] += 1;//srRightAvg;//* sin(45);
   } 
-  if (snrRight < snrThresh) {
-    avoidVector[0] += snrLeft* cos(-45);
-    avoidVector[1] += snrLeft* sin(-45);
+  if (srLeftAvg < snrThresh) {
+    avoidVector[0] += 0;//srLeftAvg* cos(-45);
+    avoidVector[1] -= 1;//srLeftAvg;//* sin(-45);
   }
 } 
 
@@ -650,24 +676,26 @@ void avoid() {
    stop or change movement.
 */
 void robotMotion() {
-  if ((flag & 1) || bitRead(state, collide) && aggressive) { //check for a collide state - aggressive kid
-    stop();
-    //Serial.println("robot stop");
-  } else if ((flag & 2) || bitRead(state, collide) && !aggressive) { //check for a collide state - aggressive kid
-    forwardDist(-5);
-    Serial.println("robot backwards");
+  if ((flag & 0b01) && aggressive) { //check for a collide state - aggressive kid
+    aggressiveKid();
+    Serial.println("robot stop"); 
   } else if (bitRead(state, collide)) {
-    stop();
     avoid();
-    //double radians = atan2(avoidVector[0], avoidVector[1]); //returns angle to x, y in radians
-    //float angle = (radians * 180.0/PI);
+    Serial.println("robot avoid");
+    double radians = atan2(avoidVector[0], avoidVector[1]); //returns angle to x, y in radians
+    float angle = (radians * 180.0/PI);
     //Serial.println(angle);
     //goToGoal(sqrt(pow(avoidVector[0], 2) + pow(avoidVector[1], 2)), angle);
-    goToGoal(avoidVector[0], avoidVector[1]); //should avoid properly, may need to adjust magnitude but angle should be correct
-  }
+    Serial.println(angle);
+    Serial.println(avoidVector[0]);
+    Serial.println(avoidVector[1]);
+    goToAngle(angle);
+    runToStop();
+    //goToGoal(avoidVector[0], avoidVector[1]); //should avoid properly, may need to adjust magnitude but angle should be correct
+  } 
   else{
-    Serial.println("robot forward");
-    forward(one_rotation);//move forward as long as all sensors are clear
+    //Serial.println("robot forward");
+    //forward(one_rotation);//move forward as long as all sensors are clear
   }
 }
 
@@ -702,7 +730,7 @@ void setup()
   Serial.begin(baud_rate);//start serial communication in order to debug the software while coding
   delay(3000);//wait 3 seconds before robot moves
 
-  aggressive = true;
+  aggressive = false;
 }
 
 void loop()
